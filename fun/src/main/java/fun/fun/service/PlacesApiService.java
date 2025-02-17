@@ -39,7 +39,6 @@ public class PlacesApiService {
                            "places.location";          
     private static final Logger LOGGER = Logger.getLogger( ClassName.class.getName());
     private static final int MAX_RESULT_COUNT = 20;
-    private static final String[] INCLUDED_TYPES = new String[] {"restaurant"};
     private static final int FILTERED_REVIEW_COUNT = 30;
                        
     @Value("${google.api.key}")
@@ -68,7 +67,7 @@ public class PlacesApiService {
         LOGGER.info(String.format("Calling Google Places API %d times", points.size()));
         
         points.forEach(p -> {
-            JsonObject payload = buildPayload(p.getLat(), p.getLon(), GeoUtils.RADIUS);
+            JsonObject payload = buildPayload(p.getLat(), p.getLon(), GeoUtils.RADIUS, request.getIncludedTypes());
             List<Place> list = getResponse(URL + "searchNearby", payload.toString());
             List<Place> filtered = list.stream()
                                         .filter(l -> l.getReviewCount() > FILTERED_REVIEW_COUNT)
@@ -136,11 +135,11 @@ public class PlacesApiService {
         }
     }
 
-    private JsonObject buildPayload(double latitude, double longitude, int radius) {
+    private JsonObject buildPayload(double latitude, double longitude, int radius, String[] includedTypes) {
         JsonObject jsonObjectLevel1 = new JsonObject();
         
         JsonArray jsonArray = new JsonArray();
-        for (String type : INCLUDED_TYPES) {
+        for (String type : includedTypes) {
             jsonArray.add(type);
         }
         jsonObjectLevel1.add("includedTypes", jsonArray);
@@ -160,6 +159,74 @@ public class PlacesApiService {
         jsonObjectLevel1.add("locationRestriction", jsonObjectLevel2);
 
         return jsonObjectLevel1;
+    }
+
+    public String[] getIncludedTypes() {
+        return new String[] { 
+            "acai_shop", 
+            "afghani_restaurant", 
+            "african_restaurant",
+            "american_restaurant", 
+            "asian_restaurant", 
+            "bagel_shop",
+            "bakery",
+            "bar",
+            "bar_and_grill",
+            "barbecue_restaurant",
+            "brazilian_restaurant",
+            "breakfast_restaurant",
+            "brunch_restaurant",
+            "buffet_restaurant", 
+            "cafe",
+            "cafeteria", 
+            "candy_store", 
+            "cat_cafe",
+            "chinese_restaurant", 
+            "chocolate_factory", 
+            "chocolate_shop", 
+            "confectionery", 
+            "deli", 
+            "dessert_restaurant", 
+            "dessert_shop", 
+            "diner",    
+            "dog_cafe", 
+            "donut_shop",
+            "fast_food_restaurant", 
+            "fine_dining_restaurant", 
+            "food_court",
+            "french_restaurant",
+            "greek_restaurant",
+            "hamburger_restaurant",
+            "ice_cream_shop",
+            "indian_restaurant",
+            "indonesian_restaurant",
+            "italian_restaurant",
+            "japanese_restaurant", 
+            "juice_shop", 
+            "korean_restaurant",
+            "lebanese_restaurant",
+            "meal_delivery",
+            "meal_takeaway",
+            "mediterranean_restaurant",
+            "mexican_restaurant",
+            "middle_eastern_restaurant",
+            "pizza_restaurant",
+            "pub",
+            "ramen_restaurant",
+            "restaurant",
+            "sandwich_shop",
+            "seafood_restaurant",
+            "spanish_restaurant",
+            "steak_house",
+            "sushi_restaurant", 
+            "tea_house",
+            "thai_restaurant",
+            "turkish_restaurant",
+            "vegan_restaurant",
+            "vegetarian_restaurant",
+            "vietnamese_restaurant", 
+            "wine_bar"
+         };
     }
 
 }

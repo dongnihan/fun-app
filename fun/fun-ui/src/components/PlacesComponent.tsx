@@ -9,7 +9,7 @@ import ListItemText from '@mui/material/ListItemText';
 import OutlinedInput from '@mui/material/OutlinedInput';
 import Button from '@mui/material/Button';
 import PlacesService from "../services/PlacesService.tsx";
-import { DataGrid, GridToolbar } from '@mui/x-data-grid';
+import { DataGrid, GridCallbackDetails, GridCellParams, GridToolbar, MuiEvent } from '@mui/x-data-grid';
 import Box from '@mui/material/Box';
 import Link from "@mui/material/Link";
 import Tabs from "@mui/material/Tabs";
@@ -108,12 +108,24 @@ export default function PlacesComponent() {
     const [locations, setLocations] = useState<Poi[]>([]);
     const [radius, setRadius] = useState(0);
     const [zoom, setZoom] = useState(13);
-    const [isLoading, setIsLoading] = useState(false);
-
+    const [isSearchLoading, setIsSearchLoading] = useState(false);
+    const [isCurrentLoacationLoading, setIsCurrentLoacationLoading] = useState(false);
+    const [includedTypes, setIncludedTypes] = useState([]);
+    const [selectedIncludedTypes, setSelectedIncludedTypes] = useState([]);
+    
     useEffect(() => {
-        // This code will run only once after the initial render
+        // This code will run only once after the initial render}
+        async function fetchData() {
+            try {
+                const response = (await PlacesService.getIncludedTypes()).data;
+                setIncludedTypes(response);
+            }catch(e) {
+                console.error(e);
+            }
+        }
         setLocations([{key: 'original', location: {lat: latitude, lng: longitude}}]);
-      }, []);
+        fetchData();
+    }, []);
 
     const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
         setTabValue(newValue);
@@ -151,12 +163,13 @@ export default function PlacesComponent() {
 
     const handleNearbySearchClick = async (event) => {
         event.preventDefault();
-        setIsLoading(true);
+        setIsSearchLoading(true);
 
         const data = {
             latitude: roundToTwo(latitude),
             longitude: roundToTwo(longitude),
-            distance: (document.getElementById('distance') as HTMLInputElement).value
+            distance: (document.getElementById('distance') as HTMLInputElement).value,
+            includedTypes: selectedIncludedTypes
         }
 
         const newLocations: Poi[] = [];
@@ -176,7 +189,7 @@ export default function PlacesComponent() {
         }catch(e) {
             console.error(e);
         }finally {
-            setIsLoading(false);
+            setIsSearchLoading(false);
         }
     }
 
@@ -199,7 +212,7 @@ export default function PlacesComponent() {
     
     const handleCurrentLocation = (params) => {
         if (navigator.geolocation) {
-            console.log("Geolocation is supported!");
+            setIsCurrentLoacationLoading(true);
             navigator.geolocation.getCurrentPosition(updatePosition);
         }
     } 
@@ -211,6 +224,7 @@ export default function PlacesComponent() {
             setLatitude(lat);
             setLongitude(lon);
             setLocations([{key: 'original', location: {lat: lat, lng: lon}}]);
+            setIsCurrentLoacationLoading(false);
         }
     }
 
@@ -220,6 +234,31 @@ export default function PlacesComponent() {
         setLatitude(clickedLat);
         setLongitude(clickedLng);
         setLocations([{key: 'original', location: {lat: clickedLat, lng: clickedLng}}]);
+    }
+
+    const handleIncludedTypesChange = (event) => {
+        const {
+            target: { value },
+        } = event;
+        setSelectedIncludedTypes(
+            // On autofill we get a stringified value.
+            typeof value === 'string' ? value.split(',') : value
+        );
+    }
+
+    const handleCellClick = (params: GridCellParams, event: MuiEvent, details: GridCallbackDetails) => {
+        if ((params.field === 'websiteUrl' || params.field === 'googleMapLink') && params.value) {
+            // Extract the native event from MuiEvent
+            const nativeEvent = event as unknown as React.MouseEvent;
+
+            // Prevent default action if necessary
+            if (nativeEvent.preventDefault) {
+                nativeEvent.preventDefault();
+            }
+
+            window.open(String(params.value), "_blank");
+        }
+
     }
 
     return (
@@ -251,36 +290,57 @@ export default function PlacesComponent() {
                             </Tabs>
 
                             <CustomTabPanel value={tabValue} index={0}>
-                                <Stack spacing={2} direction="row" useFlexGap sx={{ flexWrap: 'wrap' }}>
+                                <Stack spacing={2} direction="row" useFlexGap sx={{ flexWrap: 'wrap' }} style={{alignItems: 'center'}}>
                                     <TextField 
                                         required 
                                         id="distance" 
-                                        label="Distance(m)" 
+                                        label="Distance(meters)" 
                                         type="search" 
                                         variant="standard" 
                                         onChange={handleRadius}
-                                        style={{width: '100px'}}
+                                        style={{ width: '150px', height: '50px', marginTop: '10px' }}
                                     />
+                                    <FormControl sx={{ m: 1, width: 400, height: '50px' }}>
+                                        <InputLabel>Included Types</InputLabel>
+                                        <Select
+                                            multiple
+                                            value={selectedIncludedTypes}
+                                            onChange={(event) => handleIncludedTypesChange(event)}
+                                            input={<OutlinedInput label="Included Types" />}
+                                            renderValue={(selected) => selected.join(',')}
+                                            MenuProps={MenuProps}
+                                        >
+                                        {includedTypes.map((type) => (
+                                            <MenuItem key={type} value={type}>
+                                            <Checkbox checked={selectedIncludedTypes.includes(type)} />
+                                            <ListItemText primary={type} />
+                                            </MenuItem>
+                                        ))}
+                                        </Select>
+                                    </FormControl>
+                                   
                                     <Button 
                                         style={{height: '40px', marginTop: '8px'}}
                                         variant="contained" 
                                         onClick={handleNearbySearchClick} 
                                         disabled={latitude === 0 || longitude === 0 || radius === 0}
-                                        loading={isLoading}
+                                        loading={isSearchLoading}
                                     >
                                         Search
                                     </Button>
+                                </Stack>
+                                <Stack spacing={2} direction="row" useFlexGap sx={{ flexWrap: 'wrap' }} style={{alignItems: 'center'}}>
                                     <Tooltip title="Use current location">
-                                        <IconButton onClick={handleCurrentLocation}>
+                                        <IconButton onClick={handleCurrentLocation} loading={isCurrentLoacationLoading}>
                                             <NearMeIcon/>
                                         </IconButton>
                                     </Tooltip>
-                                    <Typography style={{paddingTop: '15px'}}>Latitude:{latitude}</Typography>
-                                    <Typography style={{paddingTop: '15px'}}>Longitude:{longitude}</Typography>
+                                    <Typography>Latitude:{latitude}</Typography>
+                                    <Typography>Longitude:{longitude}</Typography>
                                     
                                 </Stack>
 
-                                <Box sx={{ height: '87vh', width: '100%' }}>
+                                <Box sx={{ height: '87vh', width: '100%', marginTop: '5px' }}>
                                     <DataGrid
                                         rows={places}
                                         columns={COLUMNS}
@@ -296,6 +356,7 @@ export default function PlacesComponent() {
                                         disableRowSelectionOnClick
                                         slots={{ toolbar: GridToolbar }}
                                         onPaginationModelChange={handlePagination}
+                                        onCellClick={handleCellClick}
                                     />
                                 </Box>
                             </CustomTabPanel>
