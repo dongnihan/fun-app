@@ -7,4 +7,5 @@ public class PlacesNearbySearchRequest {
     private double latitude;
     private double longitude;
     private Integer distance; //meters
+    private String[] includedTypes;
 }

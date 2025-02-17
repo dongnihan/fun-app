@@ -14,4 +14,9 @@ export default class PlacesService {
     static getApiKey() {
         return axios.get(URL + "key");
     }
+
+    static getIncludedTypes() {
+        return axios.get(URL + "includedTypes");
+    }
+
 }

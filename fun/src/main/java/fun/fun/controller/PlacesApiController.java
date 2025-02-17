@@ -41,4 +41,10 @@ public class PlacesApiController {
     public String getKey() {
         return apiKey;
     }
+
+    @CrossOrigin(origins = "http://localhost:3000")
+    @GetMapping("/includedTypes")
+    public String[] getIncludedTypes() {
+        return placesApiService.getIncludedTypes();
+    }
 }
