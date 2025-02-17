@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import { useState, useEffect } from "react";
 import TextField from "@mui/material/TextField";
 import FormControl from "@mui/material/FormControl";
 import InputLabel from '@mui/material/InputLabel';
@@ -14,12 +14,14 @@ import Box from '@mui/material/Box';
 import Link from "@mui/material/Link";
 import Tabs from "@mui/material/Tabs";
 import Tab from "@mui/material/Tab";
-import {APIProvider, Map, MapCameraChangedEvent} from '@vis.gl/react-google-maps';
+import {APIProvider, Map} from '@vis.gl/react-google-maps';
 import PoiMarkersComponent from "./PoiMarkers.tsx";
 import { Poi } from "../models/Poi.tsx";
 import Paper from '@mui/material/Paper';
 import Grid from '@mui/material/Grid2';
-import { styled, Typography } from "@mui/material";
+import { IconButton, Stack, styled, Tooltip, Typography } from "@mui/material";
+import NearMeIcon from '@mui/icons-material/NearMe';
+import React from "react";
 
 const PRICE_LEVELS = [
     "UNSPECIFIED",
@@ -97,19 +99,19 @@ function roundToTwo(num: number): number {
 }  
 
 export default function PlacesComponent() {
-    const [priceLevels, setPriceLevels] = React.useState(["INEXPENSIVE", "MODERATE"]);
-    const [minRating, setMinRating] = React.useState<number>(4.5);
-    const [places, setPlaces] = React.useState<{}[]>([]);
-    const [tabValue, setTabValue] = React.useState(0);
-    const [latitude, setLatitude] = React.useState(40.71640885987045);
-    const [longitude, setLongitude] = React.useState(-74.04880009206865);
-    const [locations, setLocations] = React.useState<Poi[]>([]);
-    const [radius, setRadius] = React.useState(0);
-    const [zoom, setZoom] = React.useState(13);
+    const [priceLevels, setPriceLevels] = useState(["INEXPENSIVE", "MODERATE"]);
+    const [minRating, setMinRating] = useState<number>(4.5);
+    const [places, setPlaces] = useState<{}[]>([]);
+    const [tabValue, setTabValue] = useState(0);
+    const [latitude, setLatitude] = useState(40.71640885987045);
+    const [longitude, setLongitude] = useState(-74.04880009206865);
+    const [locations, setLocations] = useState<Poi[]>([]);
+    const [radius, setRadius] = useState(0);
+    const [zoom, setZoom] = useState(13);
+    const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
         // This code will run only once after the initial render
-        // getCurrentLocation();
         setLocations([{key: 'original', location: {lat: latitude, lng: longitude}}]);
       }, []);
 
@@ -149,6 +151,7 @@ export default function PlacesComponent() {
 
     const handleNearbySearchClick = async (event) => {
         event.preventDefault();
+        setIsLoading(true);
 
         const data = {
             latitude: roundToTwo(latitude),
@@ -172,6 +175,8 @@ export default function PlacesComponent() {
             }
         }catch(e) {
             console.error(e);
+        }finally {
+            setIsLoading(false);
         }
     }
 
@@ -191,21 +196,18 @@ export default function PlacesComponent() {
             setZoom(18);
         }
     }
-      
-    function getCurrentLocation() {
+    
+    const handleCurrentLocation = (params) => {
         if (navigator.geolocation) {
             console.log("Geolocation is supported!");
             navigator.geolocation.getCurrentPosition(updatePosition);
         }
-    }  
+    } 
 
     function updatePosition(position) {
-        console.log("updatePosition");
-        console.log(position);
         if (position) {
             const lat = position.coords.latitude;
             const lon = position.coords.longitude;  
-            console.log("lat: " + lat + ", lon: " + lon);
             setLatitude(lat);
             setLongitude(lon);
             setLocations([{key: 'original', location: {lat: lat, lng: lon}}]);
@@ -249,33 +251,34 @@ export default function PlacesComponent() {
                             </Tabs>
 
                             <CustomTabPanel value={tabValue} index={0}>
-                                <FormControl sx={{ m: 1, width: '30%'}}>
-                                    <Typography>Latitude:{latitude}</Typography>
-                                </FormControl>
-
-                                <FormControl sx={{ m: 1, width: '30%'}}>
-                                    <Typography>Longitude:{longitude}</Typography>
-                                </FormControl>
-
-                                <FormControl sx={{ m: 1, width: 150}}>
+                                <Stack spacing={2} direction="row" useFlexGap sx={{ flexWrap: 'wrap' }}>
                                     <TextField 
                                         required 
                                         id="distance" 
-                                        label="distance(meters)" 
+                                        label="Distance(m)" 
                                         type="search" 
                                         variant="standard" 
                                         onChange={handleRadius}
+                                        style={{width: '100px'}}
                                     />
-                                </FormControl>
-
-                                <FormControl sx={{ m: 1 }}>
                                     <Button 
+                                        style={{height: '40px', marginTop: '8px'}}
                                         variant="contained" 
                                         onClick={handleNearbySearchClick} 
-                                        disabled={latitude === 0 || longitude === 0 || radius === 0}>
+                                        disabled={latitude === 0 || longitude === 0 || radius === 0}
+                                        loading={isLoading}
+                                    >
                                         Search
                                     </Button>
-                                </FormControl>
+                                    <Tooltip title="Use current location">
+                                        <IconButton onClick={handleCurrentLocation}>
+                                            <NearMeIcon/>
+                                        </IconButton>
+                                    </Tooltip>
+                                    <Typography style={{paddingTop: '15px'}}>Latitude:{latitude}</Typography>
+                                    <Typography style={{paddingTop: '15px'}}>Longitude:{longitude}</Typography>
+                                    
+                                </Stack>
 
                                 <Box sx={{ height: '87vh', width: '100%' }}>
                                     <DataGrid
